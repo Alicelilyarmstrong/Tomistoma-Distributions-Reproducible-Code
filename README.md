@@ -6,7 +6,7 @@ This Github repository was completed as part of my master’s course (Ecology, E
 # Raw data #
 
 **False gharial presence records**
-All *Tomistoma schlegelii* presence records sourced from; both published and unpublished datasets, 211 from Steubing et al., (2006), 113 from Sideleau (2023), 36 from Dr Agata Staniewicz and 23 from The Global Biodiversity Information Facility (2023), with additional data from; museum specimen records, sightings, published journal articles and archival field expedition journals** 
+All *Tomistoma schlegelii* presence records sourced from; both published and unpublished datasets, 211 from Steubing et al., (2006), 113 from Sideleau (2023), 36 from Dr Agata Staniewicz and 23 from The Global Biodiversity Information Facility (2023), with additional data from; museum specimen records, sightings, published journal articles and archival field expedition journals.
 
 **All wrangled data** for analysis and plotting has been provided on Google Drive:
 <link>
@@ -42,9 +42,9 @@ Alice Armstrong.(2023). Project-one-Nile-crocodile-reproducible-code. https://gi
 
 All the R code utilized for mapping, wrangling and analysis is given in this repository. Underneath I provide a short explanation of every script.
 
-**Mapping.Rmd-**
+**Mapping.Rmd-**This script plots *Tomistoma schlegelii* presence records sourced from; both published and unpublished datasets, museum specimen records, sightings, published journal articles and archival field expedition journals.
 
-**Wrangling.Rmd-**
+**Wrangling Presence Records.Rmd-**This script wrangles*Tomistoma schlegelii* presence records sourced from; both published and unpublished datasets, museum specimen records, sightings, published journal articles and archival field expedition journals.
 
 **MaxEnt.Rmd-**
 
