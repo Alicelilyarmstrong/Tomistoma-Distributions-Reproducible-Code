@@ -46,6 +46,6 @@ All the R code utilized for mapping, wrangling and analysis is given in this rep
 
 **Wrangling Presence Records.Rmd-** This script wrangles *Tomistoma schlegelii* presence records sourced from; both published and unpublished datasets, museum specimen records, sightings, published journal articles and archival field expedition journals.
 
-**MaxEnt.Rmd-**
+**MaxEnt.Rmd-** This script runs a MaxEnt model of *Tomistoma schlegelii's* current fundamental niche, their past distributions and future disseminations under certain climate change scenarios, along with comparing suitable habitat among fundamental and realised niches.
 
 **Analysis.Rmd-**
