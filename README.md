@@ -44,7 +44,7 @@ All the R code utilized for mapping, wrangling and analysis is given in this rep
 
 **Mapping.Rmd-** This script plots *Tomistoma schlegelii* presence records sourced from; both published and unpublished datasets, museum specimen records, sightings, published journal articles and archival field expedition journals.
 
-**Wrangling Presence Records.Rmd-** This script wrangles*Tomistoma schlegelii* presence records sourced from; both published and unpublished datasets, museum specimen records, sightings, published journal articles and archival field expedition journals.
+**Wrangling Presence Records.Rmd-** This script wrangles *Tomistoma schlegelii* presence records sourced from; both published and unpublished datasets, museum specimen records, sightings, published journal articles and archival field expedition journals.
 
 **MaxEnt.Rmd-**
 
