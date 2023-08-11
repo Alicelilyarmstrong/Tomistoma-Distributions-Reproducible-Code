@@ -38,7 +38,7 @@ Xu, Jiren and Morris, Paul J. and Liu, Junguo and Holden, Joseph (2017) PEATMAP:
 # Plotting, Analyses and Wrangling #
 
 **Some code has been adapted from:**
-Alice Armstrong.(2023). Project-one-Nile-crocodile-reproducible-code. https://github.com/Alicelilyarmstrong/Project-one-Nile-crocodile-reproducible-code- 
+Alice Armstrong., (2023).Project-one-Nile-crocodile-reproducible-code. https://github.com/Alicelilyarmstrong/Project-one-Nile-crocodile-reproducible-code- 
 
 All the R code utilized for mapping, wrangling and analysis is given in this repository. Underneath I provide a short explanation of every script.
 
