@@ -35,17 +35,16 @@ HydroSHEDS. (2023). HydroSHEDS Core Data Downloads. Version 1.1. Land Mask https
 **Peatland shapefiles-**
 Xu, Jiren and Morris, Paul J. and Liu, Junguo and Holden, Joseph (2017) PEATMAP: Refining estimates of global peatland distribution based on a meta-analysis. University of Leeds. [Dataset] https://doi.org/10.5518/252 
 
-# Analyses #
+# Plotting, Analyses and Wrangling #
 
 **Some code has been adapted from:**
 Alice Armstrong.(2023). Project-one-Nile-crocodile-reproducible-code. https://github.com/Alicelilyarmstrong/Project-one-Nile-crocodile-reproducible-code- 
 
 All the R code utilized for mapping, wrangling and analysis is given in this repository. Underneath I provide a short explanation of every script.
 
+**Mapping.Rmd-**
 
 **Wrangling.Rmd-**
-
-**Mapping.Rmd-**
 
 **MaxEnt.Rmd-**
 
