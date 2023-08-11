@@ -1,0 +1,681 @@
+---
+This script runs multiple generalized logistic linear models to explore which anthropogenic pressures and land types (peatland and land water) drive the observed differences between the distribution of suitable habitat within the False gharial's fundamental and realised niches.
+---
+
+#Load packages#
+```{r}
+
+library(raster)
+library(tidyverse)
+library(dismo)
+library(terra)
+library(geodata)
+library(sf)
+library(sp)
+library(rgdal)
+library(sfheaders)
+library(rnaturalearth)
+library(reshape2)
+library(rJava)
+library(maps)
+library(mapdata)
+library(maptools)
+library(jsonlite)
+library(usdm)
+library(rgeos)
+library(spThin)
+library(ids)
+library(rpaleoclim)
+library(ecospat)
+library(ENMeval)
+library(patchwork)
+library(tibble)
+library(ggplot2)
+library(stringr)
+```
+
+
+#This portion of the script explores which anthropogenic pressure (Anthromes 12k data set) drives the #observed differences between the distribution of suitable habitat within the False gharial's fundamental #(MaxEnt) and realized niches (IUCN shape files)#
+
+
+#Read in niche overlap data#
+```{r}
+overlap<-read.csv('Tomistoma_niche_overlap_data')
+View(overlap)
+```
+
+
+#Load the Anthromes 12k data#
+
+#Set the path to the folder containing ASC files
+
+```{r}
+folder_path <- "anthromes"
+```
+#Get the list of all ASC files in the folder
+```{r}
+file_list <- list.files(folder_path, pattern = "\\.asc$", full.names = TRUE)
+
+```
+
+
+#Create an empty list to store the raster objects
+```{r}
+raster_list <- list()
+```
+
+#Read each ASC file and append it to the list
+```{r}
+for (file in file_list) {
+  raster_obj <- raster(file)
+  raster_list[[length(raster_list) + 1]] <- raster_obj
+}
+```
+
+
+#Create a raster stack from the list of raster objects#
+```{r}
+anthromes <- stack(raster_list)
+
+```
+
+
+#This section of the code extracts the Anthromes 12k data at the niche overlap coordinates#
+
+#Increase memory limit (adjust the value as needed)#
+```{r}
+memory_limit <- "8G"  # Set to desired memory limit, e.g., "8G" for 8 gigabytes
+
+```
+
+#Select overlap long, lat columns#
+```{r}
+coordinates(overlap) <- c("x", "y")
+```
+
+#Convert 'overlap' data frame into a spatial points object#
+```{r}
+proj4string(overlap) <- sp::CRS(proj4string(anthromes))
+```
+
+
+#Create an empty data frame to store the extracted coordinates#
+```{r}
+output_df <- data.frame(overlap)
+```
+
+#Loop through each layer of the 'anthromes' RasterStack#
+```{r}
+for (i in 1:nlayers(anthromes)) {
+  # Get the layer name
+  layer_name <- names(anthromes)[i]
+  
+  # Extract the values of the layer at the coordinates of 'overlap'
+  layer_values <- raster::extract(anthromes[[i]], overlap)
+  
+  # Add the layer values as a new column to the output data frame
+  output_df[[layer_name]] <- layer_values
+}
+```
+
+#Print the resulting data frame
+```{r}
+print(output_df)
+```
+
+#Write csv#
+```{r}
+write.csv(output_df,file="Tomistoma_ anthromes_extractions.csv", row.names=FALSE)
+```
+
+
+#This section of the code merges the niche overlap data frame with the anthromes extraction data frame for analylsis#
+
+#Read in file#
+```{r}
+anthromes_extractions<-read.csv("Tomistoma_ anthromes_extractions.csv")
+```
+
+
+#View file#
+```{r}
+view(anthromes_extractions)
+```
+
+#Combine the 'overlap' df and 'anthromes_extractions'
+```{r}
+combined_data <- bind_rows(overlap2,anthromes_extractions)
+```
+
+#Remove rows with NA values
+```{r}
+combined_data <- combined_data[complete.cases(combined_data), ]
+```
+
+
+#Print/view the combined and cleaned data
+```{r}
+print(combined_data)
+```
+
+#Remove the 'optional' column
+```{r}
+anthromes_GLM_data <- subset(combined_data, select = -optional)
+```
+
+#View the modified dataframe
+```{r}
+view(anthromes_GLM_data)
+```
+
+#Write file#
+```{r}
+write.csv(anthromes_GLM_data, file="Tomistoma_anthromes_GLM_data.csv", row.names=FALSE)
+```
+
+#Here I wrangle the extracted Anthromes data for analysis#
+
+#Load packages#
+```{r}
+library(tidyverse)
+library(tibble)
+library(raster)
+library(ggplot2)
+library(stringr)
+```
+
+#Read in GLM data#
+```{r}
+df<-read.csv("Tomistoma_anthromes_GLM_data.csv")
+view(df)
+```
+
+
+#Limit to 1830-2015 (present day)#
+```{r}
+df <- df[, c("x", "y", "overlap", "anthromes1830AD", "anthromes1840AD", "anthromes1850AD", 
+             "anthromes1860AD", "anthromes1870AD", "anthromes1880AD", "anthromes1890AD", 
+             "anthromes1900AD", "anthromes1910AD", "anthromes1920AD", "anthromes1930AD", 
+             "anthromes1940AD", "anthromes1950AD", "anthromes1960AD", "anthromes1970AD", 
+             "anthromes1980AD", "anthromes1990AD", "anthromes2000AD", 
+             "anthromes2001AD", "anthromes2002AD", "anthromes2003AD", "anthromes2004AD", 
+             "anthromes2005AD", "anthromes2006AD", "anthromes2007AD", "anthromes2008AD", 
+             "anthromes2009AD", "anthromes200AD", "anthromes2010AD", "anthromes2011AD", 
+             "anthromes2012AD", "anthromes2013AD", "anthromes2014AD", "anthromes2015AD")]
+
+```
+
+
+#Pivot the dataframe to long format#
+```{r}
+df_long <- df %>%
+  pivot_longer(
+    cols = starts_with("anthromes"),
+    names_to = "year",
+    values_to = "anthrome_value"
+  )
+```
+
+
+#Clean up the 'year' column to remove "anthromes"#
+```{r}
+df_long$year <- stringr::str_remove(df_long$year, "anthromes")
+```
+
+#View the restructured dataframe
+```{r}
+view(df_long)
+```
+
+
+#Rename the column#
+```{r}
+df_long <- df_long %>%
+  dplyr::rename(
+    anthrome = anthrome_value
+  )
+```
+
+#View the dataframe to check the new column name
+```{r}
+head(df_long)
+new<-df_long
+view(df_long)
+```
+
+#Change values to anthrome names#
+```{r}
+new$anthrome <- ifelse(new$anthrome == '23', "Rainfed_villages", new$anthrome)
+new$anthrome <- ifelse(new$anthrome == '32', "Residential_rainfed_villages", new$anthrome)  
+new$anthrome <- ifelse(new$anthrome == "52", "Populated_Woodlands" , new$anthrome)  
+new$anthrome <- ifelse(new$anthrome == "61", "Wild_woodlands", new$anthrome)  
+new$anthrome <- ifelse(new$anthrome == "51","Residential_woodlands", new$anthrome)  
+new$anthrome <- ifelse(new$anthrome == "53", "Remote_woodlands",new$anthrome)  
+new$anthrome <- ifelse(new$anthrome == "33", "Populated_croplands",new$anthrome)  
+new$anthrome <- ifelse(new$anthrome == "31", "Residential_irrigated_croplands",new$anthrome)  
+new$anthrome <- ifelse(new$anthrome == "11", "Urban",new$anthrome)    
+new$anthrome <- ifelse(new$anthrome == "12", "Mixed_settlements",new$anthrome)   
+new$anthrome <- ifelse(new$anthrome == "34", "Remote_croplands",new$anthrome) 
+new$anthrome <- ifelse(new$anthrome == "21", "Rice_villages" ,new$anthrome) 
+new$anthrome <- ifelse(new$anthrome == "62", "Wild_drylands" ,new$anthrome) 
+new$anthrome <- ifelse(new$anthrome == "63", "Ice_uninhabited" ,new$anthrome)
+new$anthrome <- ifelse(new$anthrome == "43", "Remote_rangelands",new$anthrome)
+new$anthrome <- ifelse(new$anthrome == "54", "Inhabited_drylands" ,new$anthrome)
+new$anthrome <- ifelse(new$anthrome == "22", "Irrigated_villages",new$anthrome)
+new$anthrome <- ifelse(new$anthrome == "42", "Populated_rangelands",new$anthrome)
+new$anthrome <- ifelse(new$anthrome == "41", "Residential rangelands",new$anthrome)
+```
+
+#Fit the GLM model#
+```{r}
+anthrome_glm <- glm(formula = overlap ~ anthrome, family = binomial(link = "logit"), data = new)
+```
+
+#Look a GLM diagnostic plots#
+```{r}
+par(mfrow = c(4, 1))
+par(mar = c(1, 1,1,1)) 
+plot(anthrome_glm)
+summary(anthrome_glm)
+```
+
+
+#Calculate the dispersion parameter#
+```{r}
+dispersion <- sum(residuals(anthrome_glm, type = "pearson")^2) / anthrome_glm$df.residual
+```
+
+
+#Compare the dispersion parameter to the expected value of 1#
+```{r}
+if (dispersion > 1) {
+  cat("Overdispersion is present in the GLM model.\n")
+} else {
+  cat("No evidence of overdispersion in the GLM model.\n")
+}
+```
+
+
+#Get the summary of the GLM model#
+```{r}
+summary_info <- summary(anthrome_glm)
+```
+
+
+#Calculate McFadden's R-squared#
+```{r}
+null.deviance <- summary_info$null.deviance
+deviance <- summary_info$deviance
+pseudo_r_squared <- 1 - (deviance / null.deviance)
+```
+
+#Create the coef_table data frame#
+```{r}
+coef_table <- data.frame(
+  Parameter_Estimate = round(summary_info$coefficients[, "Estimate"], 3),
+  Standard_Error = round(summary_info$coefficients[, "Std. Error"], 3),
+  F_Stat = round(summary_info$coefficients[, "z value"], 3),
+  P_Value = round(summary_info$coefficients[, "Pr(>|z|)"], 3),
+  Pseudo_R_squared = round(pseudo_r_squared, 3),
+  Degrees_of_Freedom = summary_info$df[1],
+  Residual_Degrees_of_Freedom = summary_info$df[2]
+)
+```
+
+
+#Calculate McFadden's pseudo R-squared#
+```{r}
+null.deviance <- summary_info$null.deviance
+deviance <- summary_info$deviance
+mcfaddens_pseudo_r_squared <- 1 - (deviance / null.deviance)
+```
+
+#Create the coef_table data frame with McFadden's pseudo R-squared#
+```{r}
+coef_table <- data.frame(
+  Parameter_Estimate = round(summary_info$coefficients[, "Estimate"], 3),
+  Standard_Error = round(summary_info$coefficients[, "Std. Error"], 3),
+  F_Stat = round(summary_info$coefficients[, "z value"], 3),
+  P_Value = round(summary_info$coefficients[, "Pr(>|z|)"], 3),
+  McFaddens_Pseudo_R_squared = round(mcfaddens_pseudo_r_squared, 3),
+  Degrees_of_Freedom = summary_info$df[1],
+  Residual_Degrees_of_Freedom = summary_info$df[2]
+)
+```
+
+
+#Print and view the resulting data frame#
+```{r}
+print(coef_table)
+view(coef_table)
+```
+
+#Write csv file#
+```{r}
+write.csv(coef_table, "Tomistoma_anthromes_coef_table.csv")
+```
+
+
+#This portion of the script explores whether peatland presence drives the observed differences between the #distribution of suitable habitat within the False gharial's fundamental (MaxEnt) and realized niches #(IUCN shape files)#
+
+
+#Read peatland (PEATMAP) shapefile#
+```{r}
+peatland_shp <- sf::st_read("C:/Users/student/OneDrive/Conservation, Evol, Ecol/Project Two/Tomistoma Distributions Reproducible Code/Tomistoma Distributions Reproducible Code/SEA_Peatland.shp")
+summary(peatland_shp)
+names(peatland_shp)
+```
+
+#Read.csv#
+```{r}
+overlap2<-read.csv('Tomistoma_niche_overlap_data')
+```
+
+#Convert 'overlap2' to a spatial object#
+```{r}
+coordinates_overlap2 <- st_as_sf(overlap2, coords = c("x", "y"), crs = 4326)
+```
+
+#Transform the coordinate system of 'coordinates_overlap2' to match 'peatland_shp'#
+```{r}
+coordinates_overlap2 <- st_transform(coordinates_overlap2, st_crs(peatland_shp))
+```
+
+#Perform the spatial join#
+```{r}
+overlap2 <- overlap2 %>%
+  left_join(st_join(coordinates_overlap2, peatland_shp, join = st_intersects))
+```
+
+#Print the resulting data frame#
+```{r}
+print(overlap2)
+```
+
+#Replace AREA values with 1 for 213785 and 0 for NA#
+```{r}
+overlap2$AREA[overlap2$AREA == 213785] <- 1
+overlap2$AREA[is.na(overlap2$AREA)] <- 0
+```
+
+#Rename the AREA column to peatland_present for clarity#
+```{r}
+names(overlap2)[names(overlap2) == "AREA"] <- "peatland_present"
+```
+
+#Print the resulting data frame#
+```{r}
+print(overlap2)
+```
+
+#Write file#
+```{r}
+write.csv(overlap2, file = "Tomistoma_peatland_GLM_data.csv", row.names = FALSE)
+```
+
+#Run the logistic regression model#
+```{r}
+model <- glm(overlap ~ peatland_present, data = overlap2, family = binomial)
+```
+
+#Print the summary of the model#
+```{r}
+summary(model)
+```
+
+
+#Fit the null model#
+```{r}
+null_model <- glm(overlap ~ 1, data = overlap2, family = binomial)
+```
+
+#Calculate McFadden's R-squared#
+```{r}
+mcfadden_r_squared <- 1 - (logLik(model) / logLik(null_model))
+
+print(mcfadden_r_squared)
+
+```
+
+
+#Get the summary of the GLM model#
+```{r}
+summary_info <- summary(model)
+```
+
+
+#Get the residual deviance and degrees of freedom#
+```{r}
+residual_deviance <- deviance(model)
+df <- df.residual(model)
+```
+
+#Calculate the ratio of residual deviance to degrees of freedom
+```{r}
+ratio <- residual_deviance / df
+```
+
+#Check if the ratio is significantly greater than 1 (indicating overdispersion)#
+```{r}
+if (ratio > 1) {
+  print("Warning: Overdispersion detected in the model.")
+  print(paste("Residual Deviance: ", residual_deviance))
+  print(paste("Degrees of Freedom: ", df))
+  print(paste("Residual Deviance / Degrees of Freedom: ", ratio))
+} else {
+  print("No evidence of overdispersion in the model.")
+}
+```
+
+#Calculate McFadden's pseudo R-squared
+```{r}
+null.deviance <- summary_info$null.deviance
+deviance <- summary_info$deviance
+mcfaddens_pseudo_r_squared <- 1 - (deviance / null.deviance)
+```
+
+#Create the coef_table data frame with McFadden's pseudo R-squared#
+```{r}
+coef_table <- data.frame(
+  Parameter_Estimate = round(summary_info$coefficients[, "Estimate"], 3),
+  Standard_Error = round(summary_info$coefficients[, "Std. Error"], 3),
+  F_Stat = round(summary_info$coefficients[, "z value"], 3),
+  P_Value = round(summary_info$coefficients[, "Pr(>|z|)"], 3),
+  McFaddens_Pseudo_R_squared = round(mcfaddens_pseudo_r_squared, 3),
+  Degrees_of_Freedom = summary_info$df[1],
+  Residual_Degrees_of_Freedom = summary_info$df[2]
+)
+```
+
+#View table#
+```{r}
+view(coef_table)
+
+```
+
+#Write file#
+```{r}
+write.csv(coef_table, "Tomistoma_peatland_coef_table.csv")
+```
+
+
+
+
+#This portion of the script explores whether land water presence drives the observed differences between #the distribution of suitable habitat within the False gharial's fundamental (MaxEnt) and realized niches #(IUCN shape files)#
+
+#Define the file path for the TIFF file#
+```{r}
+tiff_file<-"/cloud/project/as_msk_3s.tif"
+```
+
+#Load the TIFF file as a RasterLayer#
+```{r}
+water <- raster(tiff_file)
+```
+
+#Read in overlap data#
+```{r}
+overlap2<-read.csv('Tomistoma_niche_overlap_data')
+```
+
+#Assuming you have a data frame 'overlap2' with columns 'x' and 'y' for coordinates#
+```{r}
+coordinates <- overlap2[, c("x", "y")]
+```
+
+#Convert your data frame to SpatialPointsDataFrame#
+```{r}
+coordinates_spdf <- SpatialPointsDataFrame(coords = coordinates, data = overlap2, proj4string = CRS("EPSG:4326"))
+```
+
+#Transform the coordinates to Pseudo-Mercator projection#
+```{r}
+coordinates_spdf <- spTransform(coordinates_spdf, CRS("EPSG:3857"))
+```
+
+#Create a buffer around the points#
+```{r}
+bufferWidth <- 1000  
+buffers <- gBuffer(coordinates_spdf, width = bufferWidth, byid = TRUE)
+```
+
+#Extract raster values to buffers instead of points#
+```{r}
+extracted_values <- raster::extract(water, buffers)
+```
+
+#Calculate mean values and handle NA values#
+```{r}
+mean_values <- sapply(extracted_values, function(x) ifelse(all(is.na(x)), NA, mean(x, na.rm=TRUE)))
+```
+
+#Create the output data frame with 'x', 'y', 'overlap', and 'value' columns#
+```{r}
+output_df <- data.frame(x = coordinates[,1], y = coordinates[,2], overlap = overlap2$overlap)
+```
+
+#Add the extracted values to the output data frame#
+```{r}
+output_df$value <- mean_values
+```
+
+#Replace NA values with 0 in 'value' column#
+```{r}
+output_df$value[is.na(output_df$value)] <- 0
+```
+
+#Rename the 'value' column to 'Landwater_mask'#
+```{r}
+output_df <- rename(output_df, Landwater_mask = value)
+```
+
+#Check the result#
+```{r}
+print(output_df)
+```
+
+#Check the result#
+```{r}
+print(output_df)
+view(output_df)
+```
+
+
+#Load required packages#
+```{r}
+library(stats)
+library(lmtest)
+library(pscl)
+```
+
+#Run the logistic GLM#
+```{r}
+model <- glm(overlap ~ Landwater_mask, data = output_df, family = binomial())
+```
+
+#Print summary of the model#
+```{r}
+summary(model)
+```
+
+#Check for overdispersion#
+```{r}
+dispersion_parameter <- sum(residuals(model, type = "pearson")^2) / model$df.residual
+print(paste("Dispersion parameter: ", dispersion_parameter))
+```
+
+# Check if overdispersion is significant
+# For a binomial GLM, we could calculate dispersion parameter, if it is much greater than 1, we might have #overdispersion#
+```{r}
+if (dispersion_parameter > 1.5) {
+  print("There might be overdispersion in the model.")
+} else {
+  print("There doesn't appear to be overdispersion in the model.")
+}
+```
+
+#Calculate McFadden's pseudo R-squared#
+```{r}
+null_model <- glm(overlap ~ 1, data = output_df, family = binomial())
+pseudo_r_squared <- 1 - logLik(model)/logLik(null_model)
+print(paste("McFadden's Pseudo R-squared: ", pseudo_r_squared))
+```
+
+
+#Get the summary of the GLM model#
+```{r}
+summary_info <- summary(model)
+```
+
+#Get the residual deviance and degrees of freedom#
+```{r}
+residual_deviance <- deviance(model)
+df <- df.residual(model)
+```
+
+#Calculate the ratio of residual deviance to degrees of freedom#
+```{r}
+ratio <- residual_deviance / df
+```
+
+#Check if the ratio is significantly greater than 1 (indicating overdispersion)#
+```{r}
+if (ratio > 1) {
+  print("Warning: Overdispersion detected in the model.")
+  print(paste("Residual Deviance: ", residual_deviance))
+  print(paste("Degrees of Freedom: ", df))
+  print(paste("Residual Deviance / Degrees of Freedom: ", ratio))
+} else {
+  print("No evidence of overdispersion in the model.")
+}
+```
+
+#Calculate McFadden's pseudo R-squared#
+```{r}
+null.deviance <- summary_info$null.deviance
+deviance <- summary_info$deviance
+mcfaddens_pseudo_r_squared <- 1 - (deviance / null.deviance)
+```
+
+#Create the coef_table data frame with McFadden's pseudo R-squared#
+```{r}
+coef_table <- data.frame(
+  Parameter_Estimate = round(summary_info$coefficients[, "Estimate"], 3),
+  Standard_Error = round(summary_info$coefficients[, "Std. Error"], 3),
+  F_Stat = round(summary_info$coefficients[, "z value"], 3),
+  P_Value = round(summary_info$coefficients[, "Pr(>|z|)"], 3),
+  McFaddens_Pseudo_R_squared = round(mcfaddens_pseudo_r_squared, 3),
+  Degrees_of_Freedom = summary_info$df[1],
+  Residual_Degrees_of_Freedom = summary_info$df[2]
+)
+```
+
+#View table#
+```{r}
+view(coef_table)
+```
+
+#Write file#
+```{r}
+write.csv(coef_table, file = "Tomistoma_water_coef_table.csv", row.names = FALSE)
+```
