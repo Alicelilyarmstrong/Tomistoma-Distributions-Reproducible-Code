@@ -42,9 +42,9 @@ Alice Armstrong.(2023). Project-one-Nile-crocodile-reproducible-code. https://gi
 
 All the R code utilized for mapping, wrangling and analysis is given in this repository. Underneath I provide a short explanation of every script.
 
-**Mapping.Rmd-**This script plots *Tomistoma schlegelii* presence records sourced from; both published and unpublished datasets, museum specimen records, sightings, published journal articles and archival field expedition journals.
+**Mapping.Rmd-** This script plots *Tomistoma schlegelii* presence records sourced from; both published and unpublished datasets, museum specimen records, sightings, published journal articles and archival field expedition journals.
 
-**Wrangling Presence Records.Rmd-**This script wrangles*Tomistoma schlegelii* presence records sourced from; both published and unpublished datasets, museum specimen records, sightings, published journal articles and archival field expedition journals.
+**Wrangling Presence Records.Rmd-** This script wrangles*Tomistoma schlegelii* presence records sourced from; both published and unpublished datasets, museum specimen records, sightings, published journal articles and archival field expedition journals.
 
 **MaxEnt.Rmd-**
 
