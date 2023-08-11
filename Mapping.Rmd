@@ -1,10 +1,8 @@
 ---
 This script plots Tomistoma schlegelii presence records sourced from; both published and unpublished datasets, 211 from Stuebing et al. (2006), 113 from Sideleau (2023), 36 from Dr Agata Staniewicz and 23 from The Global Biodiversity Information Facility (2023), with additional data from; museum specimen records, sightings, published journal articles and archival field expedition journals.
 ---
-
-```{r }
 #load packages#
-  library(gridExtra)
+```{r }
   library(sf)
   library(dplyr)
   library(patchwork)
