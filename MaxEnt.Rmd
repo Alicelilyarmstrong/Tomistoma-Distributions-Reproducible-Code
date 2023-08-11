@@ -1,0 +1,998 @@
+---
+This script runs a MaxEnt model of Tomistoma schlegelii's current fundamental niche, their past distributions and future disseminations under certain climate change scenarios, along with comparing suitable habitat among fundamental and realised niches. 
+---
+
+#Load packages#
+
+```{r}
+
+library(raster)
+library(tidyverse)
+library(dismo)
+library(terra)
+library(geodata)
+library(sf)
+library(sp)
+library(rgdal)
+library(sfheaders)
+library(rnaturalearth)
+library(reshape2)
+library(rJava)
+library(maps)
+library(mapdata)
+library(maptools)
+library(jsonlite)
+library(usdm)
+library(rgeos)
+library(spThin)
+library(ids)
+library(rpaleoclim)
+library(ecospat)
+library(ENMeval)
+library(patchwork)
+```
+
+
+#Set seed to correct for randomness#
+```{r}
+set.seed(0)
+```
+
+#Clear work space and memory
+```{r}
+rm()
+```
+
+
+#Load the Wordclim data#
+```{r}
+geodata::worldclim_global 
+modelEnv<- worldclim_global(var='bio', res=10, path='data')
+
+``` 
+
+#Load future data (3 models) #
+```{r}
+geodata::cmip6_world 
+
+``` 
+
+
+#For each future climate scenario model (‘HadGEM3-GC31-LL’, ‘MRI-ESM2-0 model’ and the ‘ACCESS-ESM1-5 model’) I’ve downloaded predictions for the years ‘2021-2040’, ‘2041-2060’ and ‘2061-2080’ to track how Tomistoma schlegelii's distribution changes across time…#
+
+#HadGEM3-GC31-LL models#
+```{r}
+
+bioclim_future_21_40 <- cmip6_world(var='bio', res=10, ssp="585", 
+                                    model='HadGEM3-GC31-LL', 
+                                    time="2021-2040", path='data')
+
+bioclim_future_41_60 <- cmip6_world(var='bio', res=10, ssp="585", 
+                                model='HadGEM3-GC31-LL', 
+                                time="2041-2060", path='data')
+
+bioclim_future_61_80 <- cmip6_world(var='bio', res=10, ssp="585", 
+                                    model='HadGEM3-GC31-LL', 
+                                   time="2061-2080", path='data')
+```
+
+#MRI-ESM2-0 models#
+```{r}
+bioclim_future_21_40_MRI <- cmip6_world(var='bio', res=10, ssp="585", 
+                                    model='MRI-ESM2-0', 
+                                    time="2021-2040", path='data')
+
+bioclim_future_41_60_MRI <- cmip6_world(var='bio', res=10, ssp="585", 
+                                        model='MRI-ESM2-0', 
+                                        time="2041-2060", path='data')
+
+bioclim_future_61_80_MRI <- cmip6_world(var='bio', res=10, ssp="585", 
+                                        model='MRI-ESM2-0', 
+                                        time="2061-2080", path='data')
+```
+
+
+#ACCESS-ESM1-5 model #
+```{r}
+bioclim_future_21_40_ESM <- cmip6_world(var='bio', res=10, ssp="585", 
+                                        model='ACCESS-ESM1-5', 
+                                        time="2021-2040", path='data')
+
+bioclim_future_41_60_ESM <- cmip6_world(var='bio', res=10, ssp="585", 
+                                        model='ACCESS-ESM1-5', 
+                                        time="2041-2060", path='data')
+
+
+bioclim_future_61_80_ESM <- cmip6_world(var='bio', res=10, ssp="585", 
+                                        model='ACCESS-ESM1-5', 
+                                        time="2061-2080", path='data')
+```
+
+
+#To explore Tomistoma schlegelii's historical distribution 
+#load Late Holocene (historical) data#
+```{r}
+bioclim_past<-paleoclim("lh", "10m")
+``` 
+
+#Relabel the variables to match between the three datasets#
+```{r}
+bioclim_names <- paste0('bio', 1:19)
+names(modelEnv) <- bioclim_names
+names(bioclim_future_21_40)<- bioclim_names
+names(bioclim_future_41_60)<- bioclim_names
+names(bioclim_future_61_80)<- bioclim_names
+names(bioclim_future_21_40_MRI)<- bioclim_names
+names(bioclim_future_41_60_MRI)<- bioclim_names
+names(bioclim_future_61_80_MRI)<- bioclim_names
+names(bioclim_future_21_40_ESM )<-bioclim_names
+names(bioclim_future_41_60_ESM )<-bioclim_names
+names(bioclim_future_61_80_ESM )<-bioclim_names
+names(bioclim_past)<- bioclim_names
+```
+
+#Stack environmental layers as spatrasters#
+```{r}
+modelEnv<-raster::stack(modelEnv)
+bioclim_past<-raster::stack(bioclim_past)
+
+```
+
+#Stack 2021-2040 for all moodels#
+```{r}
+future_21_40<-raster::stack(bioclim_future_21_40)
+future_21_40_ESM<-raster::stack(bioclim_future_21_40_ESM)
+future_21_40_MRI<-raster::stack(bioclim_future_21_40_MRI)
+future21_40<-stack(future_21_40,future_21_40_ESM,future_21_40_MRI)
+```
+
+# Compute the average for each group of 19 layers
+```{r}
+future21_40 <- stackApply(future21_40, indices = rep(1:19, times = 3), fun = mean)
+bioclim_names <- paste0('bio', 1:19)
+names(future21_40)<- bioclim_names
+```
+#Stack models for years 2061-2040#
+```{r}
+future_41_60<-raster::stack(bioclim_future_41_60)
+future_41_60_ESM<-raster::stack(bioclim_future_41_60_ESM)
+future_41_60_MRI<-raster::stack(bioclim_future_41_60_MRI)
+future41_60<-stack(future_41_60,future_41_60_ESM,future_41_60_MRI)
+```
+
+#Compute the average for each group of 19 layers
+```{r}
+future41_60 <- stackApply(future41_60, indices = rep(1:19, times = 3), fun = mean)
+bioclim_names <- paste0('bio', 1:19)
+names(future41_60)<- bioclim_names
+```
+
+#Stack models for years 2061-2080#
+```{r}
+future_61_80<-raster::stack(bioclim_future_61_80)
+future_61_80_ESM<-raster::stack(bioclim_future_61_80_ESM)
+future_61_80_MRI<-raster::stack(bioclim_future_61_80_MRI)
+future61_80<-stack(future_61_80,future_61_80_ESM,future_61_80_MRI)
+```
+
+#Compute the average for each group of 19 layers#
+```{r}
+future61_80 <- stackApply(future61_80, indices = rep(1:19, times = 3), fun = mean)
+bioclim_names <- paste0('bio', 1:19)
+names(future61_80)<- bioclim_names
+```
+
+#Check VIF to deal with multicollinearity #
+```{r}
+usdm::vifstep(modelEnv,th=3)
+
+``` 
+
+#Remove predictors with VIF values greater than 3#do i need to do this for past and future?#
+```{r}
+modelEnv<-dropLayer(modelEnv, 
+                     c("bio1","bio3", "bio5", "bio6", "bio7", "bio9", "bio10",
+                       "bio11","bio12", "bio14","bio15", "bio16","bio17"))
+  
+
+``` 
+
+#Load and edit locality data#
+#Remember that the four loop has now been set for two columns of 'Long' 'Lat', in that order,
+#so consider formatting any future data this way before running the loop#
+  
+#Load and edit locality data#
+```{r}
+data<-read.csv('locality_data.csv')
+raw.data<-data%>%dplyr::select('Long','Lat')
+
+``` 
+
+#Check grid limits#
+```{r}
+max(raw.data$Long)  #118.1833
+min(raw.data$Long)  #98.6729
+max(raw.data$Lat) #5.483333
+min(raw.data$Lat) # -6.66656
+
+```
+
+#Set grid limits#
+```{r}
+x <- seq(from = 98, to =120, by = 0.16666)
+y <- seq(from = -7, to = 6, by = 0.16666)
+xy <- expand.grid(x, y)
+colnames(xy)<-c("Long","Lat")
+  
+bounds <- data.frame(xl = (xy$Long - 0.083333333),
+                       xu = (xy$Long + 0.083333333), 
+                       yl = (xy$Lat - 0.083333333), 
+                       yu = (xy$Lat + 0.083333333),
+                       xy)
+bounds$id<-random_id(10507, 4)
+```
+
+#Set for loop that takes one occurrence per grid cell. This can take quite some time. When reusing this #code remeber to check which way round 'Long' and 'Lat' are in raw data and swap [j,1] with [j,2] and vice versa, also change 1:335 to 1:the number of rows of your new dataset#
+```{r}
+  
+  for (i in 1:10507){
+    grid <- bounds[i,] 
+    for (j in 1:335){ 
+      x <- raw.data[j,1] 
+      y<- raw.data[j,2]
+      if (grid$xl <= x & grid$xu >= x &  grid$yl <= y & grid$yu >= y) {
+        raw.data[j,3:5]<-grid[,5:7]
+      } 
+    } 
+  }
+
+
+```
+
+#Take each unique record from the resulting dataset#
+```{r}
+unique.species<-unique(raw.data[,3:5]) 
+data<-unique.species
+data<-data%>%dplyr::select('Long.1', 'Lat.1')
+```
+
+#Rename columns#
+```{r}
+data <- data %>% rename(Long = Long.1, Lat=Lat.1)
+```
+
+#Check row numbers#
+```{r}
+nrow(data)
+```
+
+#Make model extent#
+```{r}
+model.extent<-extent(min(data$Long)-10,max(data$Long)+10,   
+                       min(data$Lat)-10,max(data$Lat)+10)
+```
+
+#Make past model extent#
+```{r}
+past_model.extent<-extent(min(data$Long)-20,max(data$Long)+20,   
+                     min(data$Lat)-20,max(data$Lat)+20)
+```
+
+#Crop data to local range#
+```{r}
+modelEnv<-crop(modelEnv,model.extent)
+modelEnv<-raster::stack(modelEnv)
+
+
+```
+
+#Withold kfold 4 sample for testing#
+#selected four as highest could go given the sample size#
+```{r}
+fold <- kfold(data, k=4)
+occtest <- data[fold == 1, ]
+occtrain <- data[fold != 1, ]
+
+```
+
+#Load background data (make sure raster is stacked)#
+```{r}
+modelEnv<-raster::stack(modelEnv) 
+bg <- randomPoints(modelEnv,10000)
+
+```
+
+#Rename columns#
+```{r}
+bgdataframe <- as.data.frame(bg)
+```
+
+#Assuming your data frame is named 'df'
+```{r}
+bgdataframe <- bgdataframe %>%
+  rename(Long = x, Lat = y)
+```
+
+#Tune model to select the best regularization/beta multiplier and feature types(betamultiplier=3 was taken from this and used in the model)#
+```{r}
+enmeval_results <- ENMevaluate(occs = data, envs = modelEnv, bg = bgdataframe,
+                               tune.args = list(fc = c("L","LQ","H", "LQH", "LQHP", "LQHPT"), rm = 1:5),
+                               partitions = "randomkfold", partition.settings = list(kfolds = 5), 
+                               algorithm = "maxent.jar")
+
+
+```
+
+#Write results as a csv# 
+```{r}
+enmeval_results@results
+write.csv(enmeval_results@results, "enmeval_results.csv")
+
+```
+
+#Method 1: Using subset() function#
+```{r}
+occtrain <- subset(occtrain, select = c('Long', 'Lat'))
+
+```
+
+
+#Fit a MaxEnt with 10 replicates, 3 betamultiplier complexity#
+```{r}
+
+maxent_model<-maxent(modelEnv,occtrain,args=c("responsecurves=TRUE",
+                                              "jackknife","betamultiplier=3","replicates=5",
+                                              "doclamp=TRUE"))
+
+```
+
+#Save MaxEnt model output#
+```{r}
+saveRDS(maxent_model, file = "maxent_output.rds")
+```
+
+#Load MaxEnt output from RDS file
+```{r}
+maxent_model <- readRDS("maxent_output.rds")
+```
+
+#Predict MaxEnt on entire dataset#
+```{r}
+maxent_entire <- predict(maxent_model, modelEnv)
+```
+
+#Sum the layers
+```{r}
+sum_raster <- sum(maxent_entire)
+```
+
+#Divide the sum by the number of layers to get the mean#
+```{r}
+mean_maxent <- sum_raster / nlayers(maxent_entire)
+```
+
+#Plot replicate models#
+```{r}
+plot(maxent_entire)
+```
+
+#Plot the mean of the five replicates#
+```{r}
+plot(mean_maxent)
+
+```
+
+#For this part of the code, I run the above MaxEnt model with 5 replicates 
+#and note the mean AUC, I then repeat this process, rerunning the model with 10 replicates to decide the #number of replicates that give the best mean AUC#
+
+#Evaluate/ test data, for each model then calculate mean AUC#
+```{r}
+
+model_evaluation1 <- dismo::evaluate(maxent_model@models[[1]], p=occtest, a=bg, x=modelEnv)
+model_evaluation2 <- dismo::evaluate(maxent_model@models[[2]], p=occtest, a=bg, x=modelEnv)
+model_evaluation3 <- dismo::evaluate(maxent_model@models[[3]], p=occtest, a=bg, x=modelEnv)
+model_evaluation4 <- dismo::evaluate(maxent_model@models[[4]], p=occtest, a=bg, x=modelEnv)
+model_evaluation5 <- dismo::evaluate(maxent_model@models[[5]], p=occtest, a=bg, x=modelEnv)
+model_evaluation6 <- dismo::evaluate(maxent_model@models[[6]], p=occtest, a=bg, x=modelEnv)
+model_evaluation7 <- dismo::evaluate(maxent_model@models[[7]], p=occtest, a=bg, x=modelEnv)
+model_evaluation8 <- dismo::evaluate(maxent_model@models[[8]], p=occtest, a=bg, x=modelEnv)
+model_evaluation9 <- dismo::evaluate(maxent_model@models[[9]], p=occtest, a=bg, x=modelEnv)
+model_evaluation10 <- dismo::evaluate(maxent_model@models[[10]], p=occtest, a=bg, x=modelEnv)
+
+```
+
+
+#Mean AUC of 5 replicates#
+
+#Store the model evaluations in a list#
+```{r}
+model_evaluations <- list(
+  model_evaluation1, model_evaluation2, model_evaluation3, model_evaluation4, 
+  model_evaluation5)
+```
+
+#Extract the AUC scores from each evaluation
+```{r}
+auc_scores <- sapply(model_evaluations, function(eval) slot(eval, "auc"))
+```
+
+# Calculate the mean AUC
+```{r}
+mean_auc <- mean(auc_scores)
+mean_auc
+```
+#0.8758871
+
+#Mean AUC of 10 replicates#
+
+#Store the model evaluations in a list#
+```{r}
+model_evaluations2 <- list(
+  model_evaluation1, model_evaluation2, model_evaluation3, model_evaluation4, 
+  model_evaluation5, model_evaluation6, model_evaluation7, model_evaluation8, 
+  model_evaluation9, model_evaluation10)
+```
+
+#Extract the AUC scores from each evaluation
+```{r}
+auc_scores2 <- sapply(model_evaluations2, function(eval) slot(eval, "auc"))
+```
+
+#Calculate the mean AUC
+```{r}
+mean_auc2 <- mean(auc_scores2)
+mean_auc2
+```
+#0.8737834
+
+
+
+#This portion of the code changes the MaxEnt model output from its continuous projection of habitat #suitability (i.e.1.0-4.0 highly suitable, <0.4 unsuitable) to a binary projection of where the False #gharial persists and where it’s absent.  Thus, I calculated a maxSSS (Maximum Sensitivity plus #Specificity)#
+
+
+#Change occurecne data frame name#
+```{r}
+occtest3<-occtest
+
+```
+
+#Rename column "x" to "Long"#
+```{r}
+colnames(occtest3)[colnames(occtest3) == "Long"] <- "x"
+```
+
+#Rename column "y" to "Lat"#
+```{r}
+colnames(occtest3)[colnames(occtest3) == "Lat"] <- "y"
+```
+
+#Assuming 'bg' and 'occtest' are your data frames#
+```{r}
+combined_df <- rbind(occtest3, bg)
+```
+
+#check row numbers
+```{r}
+nrow(occtest3)
+```
+
+#Convert data frame to vector
+```{r}
+obs <- as.vector(unlist(combined_df))
+```
+
+
+# Create a vector with 36 ones and 10,000 zeros
+```{r}
+zeros_ones <- c(rep(1, 36), rep(0, 10000))
+```
+
+# Create a data frame with a single column named 'Column' using the vector#
+```{r}
+zeros_ones  <- data.frame(Column = zeros_ones )
+```
+
+#Merge data#
+```{r}
+prep<-cbind(zeros_ones,combined_df)
+```
+
+
+#Convert longitude and latitude coordinates to SpatialPoints#
+```{r}
+points <- SpatialPoints(cbind(prep$x, prep$y))
+```
+
+#Extract values based on points
+```{r}
+extracted_values <- extract(mean_maxent, points)
+```
+
+#Format the values to display as numbers without scientific notation
+```{r}
+formatted_values <- format(extracted_values, scientific = FALSE, trim = TRUE)
+```
+
+#Combine original data frame with formatted values
+```{r}
+data_for_threshold <- cbind(prep, values = formatted_values)
+```
+
+# Isolate the 'Column' from the data frame as a vector
+```{r}
+obs <- data_for_threshold$Column
+
+```
+
+
+#Isolate the 'values' from the data frame as a vector
+```{r}
+pred <- data_for_threshold$values
+```
+
+#Make pred nummeric#
+```{r}
+pred<-as.numeric(pred)
+```
+
+
+#Load packages#
+```{r}
+library(pROC)
+```
+
+#Compute the ROC curve
+```{r}
+roc_obj <- roc(response = obs, predictor = pred, levels=c(0, 1), direction="<")
+roc_obj <- roc(obs, pred)
+
+# Calculate the coordinates of the ROC curve
+roc_coords <- coords(roc_obj, "all")
+
+# Calculate the sum of sensitivity and specificity for each threshold
+sum_sens_spec <- roc_coords[,"sensitivity"] + roc_coords[,"specificity"]
+
+# Find the threshold that maximizes the sum
+max_sss_threshold <- roc_coords[which.max(sum_sens_spec), "threshold"]
+print(max_sss_threshold)
+```
+
+
+#Plot binary threshold map
+```{r}
+MXSSS <- 0.4950152
+
+modern_binary_predictions<-mean_maxent
+modern_binary_predictions[mean_maxent >= MXSSS] <- 1  # Presence
+modern_binary_predictions[mean_maxent < MXSSS] <- 0   # Absence
+colors <- c("red", "blue")
+plot(modern_binary_predictions, col=colors)
+
+```
+
+#For this part of the code I use the MaxEnt prediction of current fundamental niche distribution to cast #future projections of Tomistoma distribution for the years  2021-2040, 2041-2060, 2061-2080#
+
+#Crop future#
+```{r}
+modelfutureEnv_1<-crop(future21_40, model.extent)
+modelfutureEnv_2<-crop(future41_60, model.extent)
+modelfutureEnv_3<-crop(future61_80, model.extent)
+```
+
+#Predict to future#
+```{r}
+future_1<-dismo::predict(maxent_model,modelfutureEnv_1)
+future_2<-dismo::predict(maxent_model,modelfutureEnv_2)
+future_3<-dismo::predict(maxent_model,modelfutureEnv_3)
+```
+
+
+#Plot future predictions#
+
+#2021-2040#
+
+#Sum the layers#
+```{r}
+sum_future1 <- sum(future_1)
+```
+
+#Divide the sum by the number of layers to get the mean#
+```{r}
+mean_future1 <- sum_future1 / nlayers(future_1)
+```
+
+#plot future 2021-2040#
+```{r}
+plot(mean_future1)
+```
+
+
+
+#This part of the code calculates the percentage decline of suitable habitat grid cells under each climate #scenario when compared with the current MaxEnt prediction of False gharial fundamental niche #distribution.
+
+#Find the grid cells in each layer that are between 1.0 and 0.4950152#
+```{r}
+mean_maxent_cells <- mean_maxent[mean_maxent >= 0.4950152 & mean_maxent <= 1.0]
+mean_future1_cells <- mean_future1[mean_future1 >= 0.4950152 & mean_future1 <= 1.0]
+```
+
+#Count the number of grid cells in each set
+```{r}
+mean_maxent_count <- length(mean_maxent_cells)
+mean_future1_count <- length(mean_future1_cells)
+```
+
+#Calculate the percentage decline
+```{r}
+percentage_decline <- ((mean_maxent_count - mean_future1_count) / mean_maxent_count) * 100
+```
+
+
+#Print the percentage decline
+```{r}
+print(paste0("The 'mean_future1' RasterLayer has ", percentage_decline, "% fewer grid cells with values between 1.0 and 0.4950152 than the 'mean_maxent' RasterLayer."))
+```
+#10.5170902716915 fewer grid cells with values between 1.0 and 0.4950152#
+#10.5#
+
+
+
+#Repeat steps for 2041-2060#
+
+#Sum the layers#
+```{r}
+sum_future2 <- sum(future_2)
+```
+
+#Divide the sum by the number of layers to get the mean#
+```{r}
+mean_future2 <- sum_future2 / nlayers(future_2)
+```
+
+#Plot future 2041-2060#
+```{r}
+plot(mean_future2)
+```
+
+#Find the grid cells in each layer that are between 1.0 and 0.4950152#
+```{r}
+mean_maxent_cells <- mean_maxent[mean_maxent >= 0.4950152 & mean_maxent <= 1.0]
+mean_future2_cells <- mean_future1[mean_future2 >= 0.4950152 & mean_future2 <= 1.0]
+```
+
+#Count the number of grid cells in each set#
+```{r}
+mean_maxent_count <- length(mean_maxent_cells)
+mean_future2_count <- length(mean_future2_cells)
+```
+
+#Calculate the percentage decline#
+```{r}
+percentage_decline <- ((mean_maxent_count - mean_future2_count) / mean_maxent_count) * 100
+```
+
+#Print the percentage decline#
+```{r}
+print(paste0("The 'mean_future2' RasterLayer has ", percentage_decline, "% fewer grid cells with values between 1.0 and 0.4950152 than the 'mean_maxent' RasterLayer."))
+```
+#4.60122699386503 fewer grid cells#
+#4.6#
+
+
+#Repeat steps for 2061-2080#
+
+#Sum the layers#
+```{r}
+sum_future3 <- sum(future_3)
+```
+
+#Divide the sum by the number of layers to get the mean#
+```{r}
+mean_future3 <- sum_future3 / nlayers(future_3)
+```
+
+#Plot future 2021-2040#
+```{r}
+plot(mean_future3)
+```
+  
+#Find the grid cells in each layer that are between -1.0 and 0.4950152#
+```{r}
+mean_maxent_cells <- mean_maxent[mean_maxent >= 0.4950152 & mean_maxent <= 1.0]
+mean_future3_cells <- mean_future1[mean_future3 >= 0.4950152 & mean_future3 <= 1.0]
+```
+  
+#Count the number of grid cells in each set#
+```{r}
+mean_maxent_count <- length(mean_maxent_cells)
+mean_future3_count <- length(mean_future3_cells)
+```
+  
+#Calculate the percentage difference#
+```{r}
+percentage_diff <- ((mean_maxent_count - mean_future3_count) / mean_future3_count) * 100
+```
+  
+
+#Calculate the percentage decline#
+```{r}
+percentage_decline <- ((mean_maxent_count - mean_future3_count) / mean_maxent_count) * 100
+```
+
+# Print the percentage decline#
+```{r}
+print(paste0("The 'mean_future3' RasterLayer has ", percentage_decline, "% fewer grid cells with values between 1.0 and 0.4950152 than the 'mean_maxent' RasterLayer."))
+```
+#-4.2068361086766%#
+#-4.206#
+
+
+
+#For this part of the code I use the MaxEnt prediction of current fundamental niche distribution to cast a #historical projection for the year 1500AD#
+
+#Crop past#
+```{r}
+modelpastEnv<-crop(bioclim_past, past_model.extent)
+```
+
+#Predict to past#
+```{r}
+past<-dismo::predict(maxent_model,modelpastEnv)
+```
+
+#Sum the layers#
+```{r}
+sum_past<- sum(past)
+```
+
+#Divide the sum by the number of layers to get the mean
+```{r}
+past<- sum_past/ nlayers(past)
+```
+
+#Plot past distribtutions 
+```{r}
+plot(past)
+
+```
+
+
+
+#This portion of the code examines the differences between the fundamental niche (MaxEnt) and realized #niche (IUCN shape files) 
+
+#Read in the IUCN range maps downloaded from the IUCN website#
+
+```{r}
+iucn <- 
+  st_read(dsn = "C:/Users/student/OneDrive/Documents/R/CROCODILES_ALLIGATORS") %>%
+  st_as_sf() %>%
+  st_transform(4326)
+```
+
+#Limit IUCN data to Tomistoma schlegelii#
+```{r}
+iucn2<-subset(iucn, binomial == "Tomistoma schlegelii")
+```
+
+
+#Load basemap#
+```{r}
+baseMap <-
+  rnaturalearth::ne_countries(returnclass = 'sf')
+```
+
+
+#Choose coordinates to limit to South East Asia#
+```{r}
+se_asia_bbox <- c(94.816452, -11.046168,
+                  154.245815, 25.735938)
+xlim_se_asia <- c(se_asia_bbox[1], se_asia_bbox[3])
+ylim_se_asia <- c(se_asia_bbox[2], se_asia_bbox[4])
+```
+
+
+#Look at the Tomistoma schlegelii distibutions #
+```{r}
+ggplot(baseMap) +
+  geom_sf(fill = "lightsteelblue1", lwd = 0.4) +
+  theme_void() +
+  geom_sf(fill = "#2c7fb8", colour = "#2c7fb8",
+          data = iucn2, show.legend = FALSE) +
+  coord_sf(xlim = xlim_se_asia, ylim = ylim_se_asia, expand = TRUE)
+```
+
+
+#Plot MaxEnt with ICUN polygons#
+```{r}
+par(mar=c(0,0,0,0))
+plot(mean_maxent)
+plot(st_geometry(iucn2), add=TRUE, lwd=2)
+```
+
+
+#This part of the code explores the percentage of grid cells that comprise the realized niche 
+#that fall into areas where the False gharial is present 
+#according to the fundamental niche.
+
+
+#Identify grid cells in the 'mean_maxent' layer that are equal to or greater than 0.4950152 - 1.0
+```{r}
+mean_maxent[mean_maxent < (0.4950152 - 1.0)] <- NA
+```
+
+#Crop the 'mean_maxent' layer to the extent of the 'iucn2' shapefile
+```{r}
+mean_maxent_cropped <- crop(mean_maxent, extent(iucn2))
+```
+
+#Rasterize the 'iucn2' shapefile to the extent and resolution of the 'mean_maxent_cropped' layer#
+```{r}
+iucn2_rasterized <- rasterize(iucn2, mean_maxent_cropped)
+```
+
+#Calculate the number of grid cells of 'iucn2' within 'mean_maxent' equal to or greater than 0.4950152 - 1.0#
+```{r}
+num_iucn2_cells <- cellStats(!is.na(mean_maxent_cropped) & !is.na(iucn2_rasterized), sum)
+```
+
+# Calculate the total number of grid cells in 'mean_maxent' that are equal to or greater than 0.4950152 - 1.0#
+```{r}
+total_cells <- cellStats(!is.na(mean_maxent), sum)
+```
+
+#Calculate the percentage#
+```{r}
+percentage <- (num_iucn2_cells / total_cells) * 100
+```
+
+#look at percentage#
+```{r}
+print(percentage)
+
+```
+
+
+
+#This portion of the code creates a data frame of coordinates depicting overlap between suitable habitat #within the False gharial’s fundamental and realised niches#
+
+
+#Clip the MaxEnt raster using the IUCN shapefile#
+```{r}
+clipped_raster <- mask(mean_maxent, iucn2)
+```
+
+#plot clipped raster#
+```{r}
+plot(clipped_raster)
+```
+
+#Create a logical mask for values between 0.4950152 and 1.0#
+```{r}
+mask <- clipped_raster >= 0.4950152 & clipped_raster <= 1.0
+```
+
+#Look at data#
+```{r}
+plot(mask)
+```
+
+#Convert the raster to points#
+```{r}
+raster_points <- rasterToPoints(mask)
+```
+
+#Filter points with values between 0.4950152 and 1.0#
+```{r}
+filtered_points <- raster_points[raster_points[, 3] >= 0.4950152 & raster_points[, 3] <= 1.0, ]
+```
+
+#Convert to data frame#
+```{r}
+coordinates_df <- data.frame(x = filtered_points[, 1], y = filtered_points[, 2], value = filtered_points[, 3])
+```
+
+#check row numbers
+```{r}
+nrow(coordinates_df)
+```
+
+#Create a data frame with 354 (331) rows of 0 in the "overlap" column
+```{r}
+overlap_df<- data.frame(overlap = rep(1, 331))
+```
+
+#Bind#
+```{r}
+overlap1<-cbind(coordinates_df,overlap_df)
+```
+
+
+#Print the resulting dataframe
+```{r}
+print(coordinates_df)
+view(coordinates_df)
+class(coordinates_df)
+coordinates_df<-as.data.frame(coordinates_df)
+```
+
+
+#Invert the mask to cut out the 'iucn2' shape file extent from 'mean_maxent'#
+```{r}
+inverted_raster <- mask(mean_maxent, iucn2, inverse = TRUE)
+```
+
+#Plot raster#
+```{r}
+plot(inverted_raster)
+```
+
+#Create a logical mask for values between 0.4950152 and 1.0#
+```{r}
+mask2 <- inverted_raster >= 0.4950152 & inverted_raster <= 1.0
+```
+
+#Plot mask#
+```{r}
+plot(mask2)
+```
+
+#Convert the raster to points
+```{r}
+raster_points <- rasterToPoints(mask2)
+```
+
+#Filter points with values between 0.4950152 and 1.0#
+```{r}
+filtered_points <- raster_points[raster_points[, 3] >= 0.4950152 & raster_points[, 3] <= 1.0, ]
+```
+
+#Convert to data frame
+```{r}
+coordinates_df2 <- data.frame(x = filtered_points[, 1], y = filtered_points[, 2], value = filtered_points[, 3])
+```
+
+#Print the resulting dataframe
+```{r}
+print(coordinates_df2)
+view(coordinates_df2)
+class(coordinates_df2)
+coordinates_df2<-as.data.frame(coordinates_df2)
+nrow(coordinates_df2)
+```
+
+
+#Create a data frame with 2199 (1951) rows of 0 in the "overlap" column
+```{r}
+overlap_df2 <- data.frame(overlap = rep(0, 1951))
+```
+
+
+#Bind#
+```{r}
+no_overlap<-cbind(coordinates_df2,overlap_df2)
+```
+
+#Bind overlap and non overlap
+```{r}
+overlap_data<-rbind(overlap1,no_overlap)
+```
+
+#Remove value column#
+```{r}
+overlap_data <- overlap_data[, !(names(overlap_data) %in% "value")]
+```
+
+#View data
+```{r}
+view(overlap_data)
+nrow(overlap_data)
+```
+
+#Write file#
+```{r}
+write.csv(overlap_data, file="Tomistoma_niche_overlap_data", row.names=FALSE)
+```
+
+
+
+
