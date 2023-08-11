@@ -3,7 +3,7 @@ This script plots Tomistoma schlegelii presence records sourced from; both publi
 ---
 
 ```{r }
-#load packages#
+#load packages
   library(gridExtra)
   library(sf)
   library(dplyr)
