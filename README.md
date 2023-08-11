@@ -32,8 +32,10 @@ Ellis, Erle; Klein Goldewijk, Kees, 2019, "Anthromes 12K Full Dataset", , Harvar
 HydroSHEDS. (2023). HydroSHEDS Core Data Downloads. Version 1.1. Land Mask https://www.sciencedirect.com/science/article/pii/S0341816217303004 
 
 
-# Peatland shapefile#
+**Peatland shapefile**
 Xu, Jiren and Morris, Paul J. and Liu, Junguo and Holden, Joseph (2017) PEATMAP: Refining estimates of global peatland distribution based on a meta-analysis. University of Leeds. [Dataset] https://doi.org/10.5518/252 
+
+
 
 Some code has been adapted from:
 Alice Armstrong.(2023). Project-one-Nile-crocodile-reproducible-code. https://github.com/Alicelilyarmstrong/Project-one-Nile-crocodile-reproducible-code- 
