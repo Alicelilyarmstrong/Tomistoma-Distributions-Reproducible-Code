@@ -6,7 +6,7 @@ This Github repository was completed as part of my master’s course (Ecology, E
 # Raw data #
 
 **False gharial presence records-**
-All *Tomistoma schlegelii* presence records sourced from; both published and unpublished datasets, 211 from Steubing et al., (2006), 113 from Sideleau (2023), 36 from Dr Agata Staniewicz and 23 from The Global Biodiversity Information Facility (2023), with additional data from; museum specimen records, sightings, published journal articles and archival field expedition journals.
+*Tomistoma schlegelii* presence records were sourced from; both published and unpublished datasets, 211 from Steubing et al., (2006), 113 from Sideleau (2023), 36 from Dr Agata Staniewicz and 23 from The Global Biodiversity Information Facility (2023), with additional data from; museum specimen records, sightings, published journal articles and archival field expedition journals.
 
 **Wrangled data for analysis and plotting has been provided on Google Drive**-https://drive.google.com/drive/folders/1yYUfdHyRVuc8cV7UdxXXY3KI7lzCDEZ0?usp=sharing  
 
