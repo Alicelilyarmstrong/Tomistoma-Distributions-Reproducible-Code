@@ -1,5 +1,5 @@
 # 🐊 Tomistoma-Distributions-Reproducible-Code🐊 #
-This is all the code for my master’s thesis, **Uncovering the geographic distribution of *Tomistoma schlegelii* and the role of anthropogenic pressures to inform their current status and future risk**
+This is all the code for my master’s thesis, **Uncovering the geographic distribution of *Tomistoma schlegelii* and the role of anthropogenic pressures to inform their current status and future risk.**
 
 This Github repository was completed as part of my master’s course (Ecology, Evolution and Conservation Research) at Imperial College London.
 
