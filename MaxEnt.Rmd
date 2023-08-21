@@ -657,7 +657,7 @@ plot(mean_future2)
 #Find the grid cells in each layer that are between 1.0 and 0.4950152#
 ```{r}
 mean_maxent_cells <- mean_maxent[mean_maxent >= 0.4950152 & mean_maxent <= 1.0]
-mean_future2_cells <- mean_future1[mean_future2 >= 0.4950152 & mean_future2 <= 1.0]
+mean_future2_cells <- mean_future2[mean_future2 >= 0.4950152 & mean_future2 <= 1.0]
 ```
 
 #Count the number of grid cells in each set#
@@ -699,7 +699,7 @@ plot(mean_future3)
 #Find the grid cells in each layer that are between -1.0 and 0.4950152#
 ```{r}
 mean_maxent_cells <- mean_maxent[mean_maxent >= 0.4950152 & mean_maxent <= 1.0]
-mean_future3_cells <- mean_future1[mean_future3 >= 0.4950152 & mean_future3 <= 1.0]
+mean_future3_cells <- mean_future3[mean_future3 >= 0.4950152 & mean_future3 <= 1.0]
 ```
   
 #Count the number of grid cells in each set#
