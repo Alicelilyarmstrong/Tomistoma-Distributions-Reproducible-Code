@@ -1,15 +1,14 @@
 # 🐊 Tomistoma-Distributions-Reproducible-Code🐊 #
-This is all the code for my master’s thesis, **Uncovering the geographic distribution of *Tomistoma schlegelii* and the role of anthropogenic pressures to inform their current status and future risk**
+This is all the code for my master’s thesis, **Uncovering the geographic distribution of *Tomistoma schlegelii* and the role of anthropogenic pressures to inform their current status and future risk.**
 
 This Github repository was completed as part of my master’s course (Ecology, Evolution and Conservation Research) at Imperial College London.
 
 # Raw data #
 
-**False gharial presence records**
-All *Tomistoma schlegelii* presence records sourced from; both published and unpublished datasets, 211 from Steubing et al., (2006), 113 from Sideleau (2023), 36 from Dr Agata Staniewicz and 23 from The Global Biodiversity Information Facility (2023), with additional data from; museum specimen records, sightings, published journal articles and archival field expedition journals.
+**False gharial presence records-**
+*Tomistoma schlegelii* presence records were sourced from; both published and unpublished datasets, 211 from Steubing et al., (2006), 113 from Sideleau (2023), 36 from Dr Agata Staniewicz and 23 from The Global Biodiversity Information Facility (2023), with additional data from; museum specimen records, sightings, published journal articles and archival field expedition journals.
 
-**All wrangled data** for analysis and plotting has been provided on Google Drive:
-<link>
+**Wrangled data for analysis and plotting has been provided on Google Drive**-https://drive.google.com/drive/folders/1yYUfdHyRVuc8cV7UdxXXY3KI7lzCDEZ0?usp=sharing  
 
 **References for original sources of data:**
 
@@ -48,4 +47,5 @@ All the R code utilized for mapping, wrangling and analysis is given in this rep
 
 **MaxEnt.Rmd-** This script runs a MaxEnt model of *Tomistoma schlegelii's* current fundamental niche, their past distributions and future disseminations under certain climate change scenarios, along with comparing suitable habitat among fundamental and realised niches.
 
-**Analysis.Rmd-**
+**Analysis.Rmd-** This script runs multiple generalized logistic linear models to explore which anthropogenic pressures and land types (peatland and land water) drive the observed differences between the distribution of suitable habitat within the False gharial's fundamental and realised niches.
+
