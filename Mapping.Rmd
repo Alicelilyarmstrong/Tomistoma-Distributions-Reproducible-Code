@@ -142,7 +142,44 @@ remove_x + # gets rid of x axis as we don't need it
 remove_y # gets rid of y axis
   
 ```
+#Here the current distributions are plotted for the intro#
 
+#Read in the IUCN range maps#
+```{r }
+iucn <- 
+  st_read(dsn = "C:/Users/student/OneDrive/Documents/R/CROCODILES_ALLIGATORS") %>%
+  st_as_sf() %>%
+  st_transform(4326)
+```
 
+#Limit IUCN data to Tomistoma schlegelii#
+```{r }
+iucn2<-subset(iucn, binomial == "Tomistoma schlegelii")
+```
 
+#Load basemap#
+```{r }
+baseMap <-
+  rnaturalearth::ne_countries(returnclass = 'sf')
+```
+
+#Choose coordinates to limit to South East Asia#
+```{r }
+se_asia_bbox <- c(94.816452, -11.046168,
+                  154.245815, 25.735938)
+xlim_se_asia <- c(se_asia_bbox[1], se_asia_bbox[3])
+ylim_se_asia <- c(se_asia_bbox[2], se_asia_bbox[4])
+```
+
+#Look at the Tomistoma schlegelii distibutions#
+```{r }
+ggplot(baseMap) +
+  geom_sf(fill = "palegreen", lwd = 0.4) +
+  theme_void() +
+  geom_sf(fill = "darkgreen", colour = "darkgreen",
+          data = iucn2, show.legend = FALSE) +
+  geom_sf(data = range_states, colour = "black",shape = 15, size = 1) +
+  coord_sf(xlim = xlim_se_asia, ylim = ylim_se_asia, expand = TRUE)
+
+```
 
